@@ -77,7 +77,7 @@ def generate(
     )
 
     decoder_output = decoder_pipeline(
-        image_embeddings=prior_output.image_embeddings.to(torch.float16),
+        image_embeddings=prior_output.image_embeddings.to(torch.bfloat16),
         prompt=prompt,
         num_inference_steps=decoder_num_inference_steps,
         guidance_scale=decoder_guidance_scale,
