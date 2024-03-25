@@ -62,7 +62,6 @@ def generate(
     num_images_per_prompt: int = 2,
 ) -> PIL.Image.Image:
     
-    #previewer.eval().requires_grad_(False).to(device).to(dtype)
     prior_pipeline.to(device)
     decoder_pipeline.to(device)
     
@@ -226,11 +225,6 @@ with gr.Blocks() as demo:
         outputs=result,
         api_name="run",
     )
-    
-# with gr.Blocks(css="style.css") as demo_with_history:
-#     with gr.Tab("App"):
-#         demo.render()
 
 if __name__ == "__main__":
-    # demo_with_history.queue(max_size=20).launch()
-    demo.queue(max_size=20).launch()
+    demo.queue(max_size=20).launch(server_name="0.0.0.0")
