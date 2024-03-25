@@ -5,7 +5,7 @@ import numpy as np
 import PIL.Image
 import torch
 from diffusers import StableCascadeDecoderPipeline, StableCascadePriorPipeline
-from diffusers.pipelines.wuerstchen import DEFAULT_STAGE_C_TIMESTEPS
+# from diffusers.pipelines.wuerstchen import DEFAULT_STAGE_C_TIMESTEPS
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
@@ -24,8 +24,8 @@ PREVIEW_IMAGES = False
 dtype = torch.bfloat16
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if torch.cuda.is_available():
-    prior_pipeline = StableCascadePriorPipeline.from_pretrained("stabilityai/stable-cascade-prior", torch_dtype=dtype)#.to(device)
-    decoder_pipeline = StableCascadeDecoderPipeline.from_pretrained("stabilityai/stable-cascade",  torch_dtype=dtype)#.to(device) 
+    prior_pipeline = StableCascadePriorPipeline.from_pretrained("stabilityai/stable-cascade-prior", variant="bf16", torch_dtype=dtype)#.to(device)
+    decoder_pipeline = StableCascadeDecoderPipeline.from_pretrained("stabilityai/stable-cascade", variant="bf16", torch_dtype=dtype)#.to(device) 
 
     if ENABLE_CPU_OFFLOAD:
         prior_pipeline.enable_model_cpu_offload()
@@ -62,9 +62,6 @@ def generate(
     num_images_per_prompt: int = 2,
 ) -> PIL.Image.Image:
     
-    prior_pipeline.to(device)
-    decoder_pipeline.to(device)
-    
     generator = torch.Generator().manual_seed(seed)
     print("prior_num_inference_steps: ", prior_num_inference_steps)
     prior_output = prior_pipeline(
@@ -72,21 +69,15 @@ def generate(
         height=height,
         width=width,
         num_inference_steps=prior_num_inference_steps,
-        timesteps=DEFAULT_STAGE_C_TIMESTEPS,
+        # timesteps=DEFAULT_STAGE_C_TIMESTEPS,
         negative_prompt=negative_prompt,
         guidance_scale=prior_guidance_scale,
         num_images_per_prompt=num_images_per_prompt,
         generator=generator,
     )
-    if PREVIEW_IMAGES:
-        for _ in range(len(DEFAULT_STAGE_C_TIMESTEPS)):
-            r = next(prior_output)
-            if isinstance(r, list):
-                yield r[0]
-        prior_output = r
 
     decoder_output = decoder_pipeline(
-        image_embeddings=prior_output.image_embeddings,
+        image_embeddings=prior_output.image_embeddings.to(torch.float16),
         prompt=prompt,
         num_inference_steps=decoder_num_inference_steps,
         guidance_scale=decoder_guidance_scale,
@@ -96,7 +87,7 @@ def generate(
     ).images
     print(decoder_output)
     
-    yield decoder_output[0]
+    return decoder_output[0]
 
 
 examples = [
